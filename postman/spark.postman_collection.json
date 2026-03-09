@@ -1,0 +1,90 @@
+{
+  "info": {
+    "name": "sPark API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "http://localhost:8001/api/register", "protocol": "http", "host": ["localhost"], "port": "8001", "path": ["api", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo User\",\n  \"email\": \"demo@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "http://localhost:8001/api/login", "protocol": "http", "host": ["localhost"], "port": "8001", "path": ["api", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parking",
+      "item": [
+        {
+          "name": "List Spots",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "http://localhost:8002/api/spots", "protocol": "http", "host": ["localhost"], "port": "8002", "path": ["api", "spots"] }
+          }
+        },
+        {
+          "name": "Create Spot",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "http://localhost:8002/api/spots", "protocol": "http", "host": ["localhost"], "port": "8002", "path": ["api", "spots"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"A-01\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Charging",
+      "item": [
+        {
+          "name": "Create Charge Request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "http://localhost:8003/api/charge-requests", "protocol": "http", "host": ["localhost"], "port": "8003", "path": ["api", "charge-requests"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"1\",\n  \"spot_id\": 1,\n  \"target_percent\": 80,\n  \"current_percent\": 20\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "IoT Gateway",
+      "item": [
+        {
+          "name": "MQTT Status",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "http://localhost:8005/api/mqtt/status", "protocol": "http", "host": ["localhost"], "port": "8005", "path": ["api", "mqtt", "status"] }
+          }
+        }
+      ]
+    }
+  ]
+}

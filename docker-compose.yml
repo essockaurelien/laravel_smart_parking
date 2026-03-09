@@ -1,0 +1,237 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: spark-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: spark-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: spark-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  diyhue:
+    image: diyhue/core:latest
+    container_name: spark-diyhue
+    ports:
+      - "8080:80"
+      - "1900:1900/udp"
+    volumes:
+      - diyhue:/opt/hue-emulator
+
+  api-gateway:
+    image: envoyproxy/envoy:v1.29-latest
+    container_name: spark-api-gateway
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./infra/envoy/jwks.json:/run/secrets/jwks.json:ro
+    depends_on:
+      - rate-limit
+      - auth
+      - parking
+      - charging
+      - payments
+      - iot-gateway
+      - web-ui
+
+  rate-limit:
+    image: envoyproxy/ratelimit:v1.4.0
+    container_name: spark-rate-limit
+    environment:
+      LOG_LEVEL: info
+      RATE_LIMIT_CONFIG_TYPE: file
+      RATE_LIMIT_CONFIG_FILE: /etc/ratelimit/ratelimit.yaml
+    volumes:
+      - ./infra/envoy/ratelimit.yaml:/etc/ratelimit/ratelimit.yaml:ro
+
+  auth:
+    build:
+      context: ./services/auth
+    container_name: spark-auth
+    environment:
+      APP_KEY: base64:2F3r8CzK1sk5w4tLq+6a2QO0X6W4N9w0Q1mJ1dE9w8s=
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8001
+      JWT_PRIVATE_KEY_PATH: /run/secrets/jwtRS256.key
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwtRS256.key.pub
+      JWT_ISSUER: spark-auth
+      JWT_AUDIENCE: spark-api
+      JWT_KID: spark-dev
+      JWT_TTL_MINUTES: 15
+      JWT_REFRESH_TTL_DAYS: 30
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: auth_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    volumes:
+      - ./infra/envoy/keys/jwtRS256.key:/run/secrets/jwtRS256.key:ro
+      - ./infra/envoy/keys/jwtRS256.key.pub:/run/secrets/jwtRS256.key.pub:ro
+    ports:
+      - "8001:8000"
+    depends_on:
+      - postgres
+
+  parking:
+    build:
+      context: ./services/parking
+    container_name: spark-parking
+    environment:
+      APP_KEY: base64:2F3r8CzK1sk5w4tLq+6a2QO0X6W4N9w0Q1mJ1dE9w8s=
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8002
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: parking_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      AUTH_BASE_URL: http://auth:8000
+      PAYMENTS_BASE_URL: http://payments:8000
+      PAYMENTS_INTERNAL_TOKEN: spark-internal-token
+      IOT_BASE_URL: http://iot-gateway:8000
+      IOT_INTERNAL_TOKEN: spark-internal-token
+      PARKING_SYSTEM_EMAIL: admin@local
+      PARKING_SYSTEM_PASSWORD: admin12345
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres
+      - auth
+
+  charging:
+    build:
+      context: ./services/charging
+    container_name: spark-charging
+    environment:
+      APP_KEY: base64:2F3r8CzK1sk5w4tLq+6a2QO0X6W4N9w0Q1mJ1dE9w8s=
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8003
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: charging_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      AUTH_BASE_URL: http://auth:8000
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      PAYMENTS_BASE_URL: http://payments:8000
+      PAYMENTS_INTERNAL_TOKEN: spark-internal-token
+    ports:
+      - "8003:8000"
+    depends_on:
+      - postgres
+      - auth
+      - mosquitto
+
+  payments:
+    build:
+      context: ./services/payments
+    container_name: spark-payments
+    environment:
+      APP_KEY: base64:2F3r8CzK1sk5w4tLq+6a2QO0X6W4N9w0Q1mJ1dE9w8s=
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8004
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: payments_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      AUTH_BASE_URL: http://auth:8000
+      PAYMENTS_INTERNAL_TOKEN: spark-internal-token
+    ports:
+      - "8004:8000"
+    depends_on:
+      - postgres
+      - auth
+
+  iot-gateway:
+    build:
+      context: ./services/iot-gateway
+    container_name: spark-iot-gateway
+    environment:
+      APP_KEY: base64:2F3r8CzK1sk5w4tLq+6a2QO0X6W4N9w0Q1mJ1dE9w8s=
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8005
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: iot_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      AUTH_BASE_URL: http://auth:8000
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      INTERNAL_SHARED_TOKEN: spark-internal-token
+      HUE_BASE_URL: http://diyhue
+      HUE_USERNAME: 6402db2c0abc11f1a5d69a46f8f72f9a
+    ports:
+      - "8005:8000"
+    depends_on:
+      - postgres
+      - mosquitto
+
+  web-ui:
+    build:
+      context: ./services/web-ui
+    container_name: spark-web-ui
+    environment:
+      APP_KEY: base64:2F3r8CzK1sk5w4tLq+6a2QO0X6W4N9w0Q1mJ1dE9w8s=
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8006
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: webui_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      AUTH_BASE_URL: http://auth:8000
+      PARKING_BASE_URL: http://parking:8000
+      CHARGING_BASE_URL: http://charging:8000
+      PAYMENTS_BASE_URL: http://payments:8000
+      IOT_BASE_URL: http://iot-gateway:8000
+    ports:
+      - "8006:8000"
+    depends_on:
+      - postgres
+      - auth
+      - parking
+      - charging
+      - payments
+
+volumes:
+  pgdata:
+  diyhue:

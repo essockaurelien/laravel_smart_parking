@@ -1,0 +1,62 @@
+@auth_base = http://localhost:8001
+@parking_base = http://localhost:8002
+@charging_base = http://localhost:8003
+@payments_base = http://localhost:8004
+@iot_base = http://localhost:8005
+@webui_base = http://localhost:8006
+@auth_token =
+
+### Auth - Register
+POST {{auth_base}}/api/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Morison Mary jane",
+  "email": "marijane@example.com",
+  "password": "maryjane123",
+  "password_confirmation": "maryjane123"
+}
+
+### Auth - Login
+# @name login
+POST {{auth_base}}/api/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "maryjane@example.com",
+  "password": "maryjane123"
+}
+
+### Auth - Token from login
+@auth_token = {{login.response.body.access_token}}
+
+### Auth - Me
+GET {{auth_base}}/api/me
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Parking - Spots (list)
+GET {{parking_base}}/api/spots
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Charging - Charge Requests (list)
+GET {{charging_base}}/api/charge-requests
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Payments - Payments (list)
+GET {{payments_base}}/api/payments
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### IoT Gateway - MQTT Status
+GET {{iot_base}}/api/mqtt/status
+Accept: application/json
+Authorization: Bearer {{auth_token}}
+
+### Web UI - Home
+GET {{webui_base}}/
+Accept: text/html

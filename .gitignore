@@ -1,0 +1,9 @@
+.env
+.env.prod
+.secrets/
+infra/envoy/keys/
+infra/envoy/jwks.json
+infra/caddy/data/
+infra/caddy/config/
+infra/observability/data/
+infra/observability/*.db

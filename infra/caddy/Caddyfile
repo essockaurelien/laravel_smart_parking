@@ -1,0 +1,12 @@
+{
+  email {env.ACME_EMAIL}
+}
+
+{env.DOMAIN} {
+  log {
+    output stdout
+    format json
+  }
+  encode gzip
+  reverse_proxy api-gateway:8000
+}

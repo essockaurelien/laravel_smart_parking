@@ -1,0 +1,6 @@
+CREATE DATABASE auth_db;
+CREATE DATABASE parking_db;
+CREATE DATABASE charging_db;
+CREATE DATABASE payments_db;
+CREATE DATABASE iot_db;
+CREATE DATABASE webui_db;
