@@ -9,7 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   pgadmin:
     image: dpage/pgadmin4:8
@@ -29,7 +29,7 @@ services:
       - "1883:1883"
       - "9001:9001"
     volumes:
-      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
   diyhue:
     image: diyhue/core:latest
@@ -40,34 +40,6 @@ services:
     volumes:
       - diyhue:/opt/hue-emulator
 
-  api-gateway:
-    image: envoyproxy/envoy:v1.29-latest
-    container_name: spark-api-gateway
-    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
-      - ./infra/envoy/jwks.json:/run/secrets/jwks.json:ro
-    depends_on:
-      - rate-limit
-      - auth
-      - parking
-      - charging
-      - payments
-      - iot-gateway
-      - web-ui
-
-  rate-limit:
-    image: envoyproxy/ratelimit:v1.4.0
-    container_name: spark-rate-limit
-    environment:
-      LOG_LEVEL: info
-      RATE_LIMIT_CONFIG_TYPE: file
-      RATE_LIMIT_CONFIG_FILE: /etc/ratelimit/ratelimit.yaml
-    volumes:
-      - ./infra/envoy/ratelimit.yaml:/etc/ratelimit/ratelimit.yaml:ro
-
   auth:
     build:
       context: ./services/auth
@@ -77,22 +49,12 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8001
-      JWT_PRIVATE_KEY_PATH: /run/secrets/jwtRS256.key
-      JWT_PUBLIC_KEY_PATH: /run/secrets/jwtRS256.key.pub
-      JWT_ISSUER: spark-auth
-      JWT_AUDIENCE: spark-api
-      JWT_KID: spark-dev
-      JWT_TTL_MINUTES: 15
-      JWT_REFRESH_TTL_DAYS: 30
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
       DB_DATABASE: auth_db
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-    volumes:
-      - ./infra/envoy/keys/jwtRS256.key:/run/secrets/jwtRS256.key:ro
-      - ./infra/envoy/keys/jwtRS256.key.pub:/run/secrets/jwtRS256.key.pub:ro
     ports:
       - "8001:8000"
     depends_on:

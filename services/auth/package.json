@@ -1,6 +1,7 @@
 {
     "private": true,
     "type": "module",
+    "author": "@essock",
     "scripts": {
         "dev": "vite",
         "build": "vite build"
